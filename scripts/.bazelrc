@@ -1,0 +1,2 @@
+﻿startup
+common --repo_env=CC=clang --repo_env=CXX=clang++ --cxxopt='-std=c++17'
