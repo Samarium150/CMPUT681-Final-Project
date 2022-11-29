@@ -183,30 +183,14 @@ void RunWithoutVerify(Traits st, const Dist dist, const size_t num_keys,
   HWY_ASSERT(aligned[0] < aligned[num_lanes - 1]);
 }
 
-void BenchParallel() {
-  // Not interested in benchmark results for other targets on x86
-  if (HWY_ARCH_X86 && (HWY_TARGET != HWY_AVX2 && HWY_TARGET != HWY_AVX3)) {
-    return;
-  }
-
-  ThreadPool pool;
+void runAlgoBench(Algo algo, const size_t num_keys, const Dist dist,
+                  ThreadPool &pool) {
   const size_t NT = pool.NumThreads();
-
-  detail::SharedTraits<detail::TraitsLane<detail::OrderAscending<int64_t>>> st;
-  using KeyType = typename decltype(st)::KeyType;
-  const size_t num_keys = size_t{100} * 1000 * 1000;
-
-#if HAVE_IPS4O
-  const Algo algo = Algo::kIPS4O;
-#else
-  const Algo algo = Algo::kVQSort;
-#endif
-  const Dist dist = Dist::kUniform32;
-
   SharedState shared;
   shared.tls.resize(NT);
-
   std::vector<Result> results;
+  detail::SharedTraits<detail::TraitsLane<detail::OrderAscending<int64_t>>> st;
+  using KeyType = typename decltype(st)::KeyType;
   for (size_t nt = 1; nt < NT; nt += HWY_MAX(1, NT / 16)) {
     Timestamp t0;
     // Default capture because MSVC wants algo/dist but clang does not.
@@ -220,6 +204,20 @@ void BenchParallel() {
   }
 }
 
+void BenchParallel() {
+  // Not interested in benchmark results for other targets on x86
+  if (HWY_ARCH_X86 && (HWY_TARGET != HWY_AVX2 && HWY_TARGET != HWY_AVX3)) {
+    return;
+  }
+
+  ThreadPool pool;
+  const size_t num_keys = size_t{100} * 1000 * 1000;
+  const Dist dist = Dist::kUniform32;
+#if HAVE_IPS4O
+  runAlgoBench(Algo::kIPS4O, num_keys, dist, pool);
+#endif
+  runAlgoBench(Algo::kVQSort, num_keys, dist, pool);
+}
 }  // namespace
 // NOLINTNEXTLINE(google-readability-namespace-comments)
 }  // namespace HWY_NAMESPACE
