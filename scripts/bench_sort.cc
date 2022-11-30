@@ -64,8 +64,8 @@ HWY_NOINLINE void BenchPartition() {
 
   detail::Generator rng(&sum, 123);  // for ChoosePivot
 
-  const size_t max_log2 = AdjustedLog2Reps(20);
-  for (size_t log2 = max_log2; log2 < max_log2 + 1; ++log2) {
+  const size_t max_log2 = AdjustedLog2Reps(13);
+  for (size_t log2 = max_log2; log2 < max_log2 + 14; ++log2) {
     const size_t num_lanes = 1ull << log2;
     const size_t num_keys = num_lanes / st.LanesPerKey();
     auto aligned = hwy::AllocateAligned<LaneType>(num_lanes);
@@ -101,16 +101,19 @@ HWY_NOINLINE void BenchPartition() {
 
 HWY_NOINLINE void BenchAllPartition() {
   // Not interested in benchmark results for these targets
-  if (HWY_TARGET == HWY_SSSE3) {
+  // if (HWY_TARGET == HWY_SSSE3) {
+  //   return;
+  // }
+  if (HWY_TARGET != HWY_AVX2) {
     return;
   }
 
   BenchPartition<TraitsLane<OrderDescending<float>>>();
-  BenchPartition<TraitsLane<OrderDescending<int32_t>>>();
+  // BenchPartition<TraitsLane<OrderDescending<int32_t>>>();
   BenchPartition<TraitsLane<OrderDescending<int64_t>>>();
   BenchPartition<Traits128<OrderAscending128>>();
   // BenchPartition<Traits128<OrderDescending128>>();
-  BenchPartition<Traits128<OrderAscendingKV128>>();
+  // BenchPartition<Traits128<OrderAscendingKV128>>();
 }
 
 template <class Traits>
@@ -159,7 +162,10 @@ HWY_NOINLINE void BenchBase(std::vector<Result>& results) {
 
 HWY_NOINLINE void BenchAllBase() {
   // Not interested in benchmark results for these targets
-  if (HWY_TARGET == HWY_SSSE3) {
+  // if (HWY_TARGET == HWY_SSSE3) {
+  //   return;
+  // }
+  if (HWY_TARGET != HWY_AVX2) {
     return;
   }
 
@@ -258,7 +264,10 @@ HWY_NOINLINE void BenchSort(size_t num_keys) {
 
 HWY_NOINLINE void BenchAllSort() {
   // Not interested in benchmark results for these targets
-  if (HWY_TARGET == HWY_SSSE3 || HWY_TARGET == HWY_SSE4) {
+  // if (HWY_TARGET == HWY_SSSE3 || HWY_TARGET == HWY_SSE4) {
+  //   return;
+  // }
+  if (HWY_TARGET != HWY_AVX2) {
     return;
   }
 
@@ -273,19 +282,29 @@ HWY_NOINLINE void BenchAllSort() {
         1 * M,
 #endif
        }) {
-    BenchSort<TraitsLane<OrderAscending<float>>>(num_keys);
-    // BenchSort<TraitsLane<OrderDescending<double>>>(num_keys);
-    // BenchSort<TraitsLane<OrderAscending<int16_t>>>(num_keys);
-    BenchSort<TraitsLane<OrderDescending<int32_t>>>(num_keys);
-    BenchSort<TraitsLane<OrderAscending<int64_t>>>(num_keys);
-    // BenchSort<TraitsLane<OrderDescending<uint16_t>>>(num_keys);
-    // BenchSort<TraitsLane<OrderDescending<uint32_t>>>(num_keys);
-    // BenchSort<TraitsLane<OrderAscending<uint64_t>>>(num_keys);
+        size_t i = 1;
+        BenchSort<TraitsLane<OrderAscending<float>>>(i * num_keys);
+        BenchSort<TraitsLane<OrderAscending<double>>>(i * num_keys);
+        BenchSort<TraitsLane<OrderAscending<int32_t>>>(i * num_keys);
+        BenchSort<TraitsLane<OrderAscending<int64_t>>>(i * num_keys);
+#if !HAVE_VXSORT && VQSORT_ENABLED
+        BenchSort<Traits128<OrderAscending128>>(i * num_keys);
+#endif
+        for (i = 2; i <= 10; i += 2) {
+          BenchSort<TraitsLane<OrderAscending<float>>>(i * num_keys);
+          BenchSort<TraitsLane<OrderAscending<double>>>(i * num_keys);
+          // BenchSort<TraitsLane<OrderAscending<int16_t>>>(num_keys);
+          BenchSort<TraitsLane<OrderAscending<int32_t>>>(i * num_keys);
+          BenchSort<TraitsLane<OrderAscending<int64_t>>>(i * num_keys);
+          // BenchSort<TraitsLane<OrderDescending<uint16_t>>>(num_keys);
+          // BenchSort<TraitsLane<OrderDescending<uint32_t>>>(num_keys);
+          // BenchSort<TraitsLane<OrderAscending<uint64_t>>>(num_keys);
 
 #if !HAVE_VXSORT && VQSORT_ENABLED
-    BenchSort<Traits128<OrderAscending128>>(num_keys);
-    BenchSort<Traits128<OrderAscendingKV128>>(num_keys);
+          BenchSort<Traits128<OrderAscending128>>(i * num_keys);
+          // BenchSort<Traits128<OrderAscendingKV128>>(num_keys);
 #endif
+        }
   }
 }
 

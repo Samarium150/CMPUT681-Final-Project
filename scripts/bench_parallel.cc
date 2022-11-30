@@ -183,7 +183,23 @@ void RunWithoutVerify(Traits st, const Dist dist, const size_t num_keys,
   HWY_ASSERT(aligned[0] < aligned[num_lanes - 1]);
 }
 
-void runAlgoBench(Algo algo, const size_t num_keys, const Dist dist,
+template <class Traits>
+HWY_NOINLINE void BenchDiffDataType(Algo algo, const size_t num_keys, const Dist dist,
+                  ThreadPool &pool) {
+  using KeyType = typename Traits::KeyType;
+  detail::SharedTraits<Traits> st;
+  const size_t num_threads = 16;
+  SharedState shared;
+  shared.tls.resize(num_threads);
+  Timestamp t0;
+  pool.RunOnThreads(num_threads, [=, &shared](size_t thread) {
+    RunWithoutVerify(st, dist, num_keys, algo, shared, num_threads);
+  });
+  double time = SecondsSince(t0);
+  Result(algo, dist, num_keys, num_threads, time, sizeof(KeyType), st.KeyString()).Print();
+}
+
+void BenchDiffNumThreads(Algo algo, const size_t num_keys, const Dist dist,
                   ThreadPool &pool) {
   const size_t NT = pool.NumThreads();
   SharedState shared;
@@ -204,7 +220,7 @@ void runAlgoBench(Algo algo, const size_t num_keys, const Dist dist,
   }
 }
 
-void BenchParallel() {
+void BenchParallelDiffDataType() {
   // Not interested in benchmark results for other targets on x86
   if (HWY_ARCH_X86 && (HWY_TARGET != HWY_AVX2 && HWY_TARGET != HWY_AVX3)) {
     return;
@@ -214,9 +230,30 @@ void BenchParallel() {
   const size_t num_keys = size_t{100} * 1000 * 1000;
   const Dist dist = Dist::kUniform32;
 #if HAVE_IPS4O
-  runAlgoBench(Algo::kIPS4O, num_keys, dist, pool);
+  BenchDiffDataType<detail::TraitsLane<detail::OrderAscending<float>>>(Algo::kIPS4O, num_keys, dist, pool);
+  BenchDiffDataType<detail::TraitsLane<detail::OrderAscending<int32_t>>>(Algo::kIPS4O, num_keys, dist, pool);
+  BenchDiffDataType<detail::TraitsLane<detail::OrderAscending<int64_t>>>(Algo::kIPS4O, num_keys, dist, pool);
+  // BenchDiffDataType<detail::TraitsLane<detail::OrderAscending128>>(Algo::kIPS4O, num_keys, dist, pool);
 #endif
-  runAlgoBench(Algo::kVQSort, num_keys, dist, pool);
+  BenchDiffDataType<detail::TraitsLane<detail::OrderAscending<float>>>(Algo::kVQSort, num_keys, dist, pool);
+  BenchDiffDataType<detail::TraitsLane<detail::OrderAscending<int32_t>>>(Algo::kVQSort, num_keys, dist, pool);
+  BenchDiffDataType<detail::TraitsLane<detail::OrderAscending<int64_t>>>(Algo::kVQSort, num_keys, dist, pool);
+  // BenchDiffDataType<detail::TraitsLane<detail::OrderAscending128>>(Algo::kVQSort, num_keys, dist, pool);
+}
+
+void BenchParallelDiffNumThreads() {
+  // Not interested in benchmark results for other targets on x86
+  if (HWY_ARCH_X86 && (HWY_TARGET != HWY_AVX2 && HWY_TARGET != HWY_AVX3)) {
+    return;
+  }
+
+  ThreadPool pool;
+  const size_t num_keys = size_t{100} * 1000 * 1000;
+  const Dist dist = Dist::kUniform32;
+#if HAVE_IPS4O
+  BenchDiffNumThreads(Algo::kIPS4O, num_keys, dist, pool);
+#endif
+  BenchDiffNumThreads(Algo::kVQSort, num_keys, dist, pool);
 }
 }  // namespace
 // NOLINTNEXTLINE(google-readability-namespace-comments)
@@ -229,7 +266,8 @@ HWY_AFTER_NAMESPACE();
 namespace hwy {
 namespace {
 HWY_BEFORE_TEST(BenchParallel);
-HWY_EXPORT_AND_TEST_P(BenchParallel, BenchParallel);
+HWY_EXPORT_AND_TEST_P(BenchParallel, BenchParallelDiffDataType);
+HWY_EXPORT_AND_TEST_P(BenchParallel, BenchParallelDiffNumThreads);
 }  // namespace
 }  // namespace hwy
 

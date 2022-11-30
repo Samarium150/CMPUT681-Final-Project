@@ -32,4 +32,4 @@
 *.app
 
 # Benchmarks
-*/results/*.txt
+bench*.txt
