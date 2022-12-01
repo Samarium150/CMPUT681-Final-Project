@@ -14,8 +14,8 @@ for ((i=0; i<7; i++)); do
     echo "Run parallel sorting round ${i}..."
     bazel-bin/hwy/contrib/sort/bench_parallel >> bench_parallel_${i}.txt
 done
-bazel-bin/hwy/contrib/sort/bench_sort >> bench_sort.txt
-bazel-bin/hwy/contrib/sort/bench_parallel >> bench_parallel.txt
+bazel-bin/hwy/contrib/sort/bench_sort > bench_sort.txt
+bazel-bin/hwy/contrib/sort/bench_parallel > bench_parallel.txt
 mv bench_sort.txt ../scripts/results/
 mv bench_parallel*.txt ../scripts/results/parallel/
 echo "Reset submodules..."
