@@ -3,7 +3,7 @@
 set -e
 
 cp .bazelrc WORKSPACE ../highway/
-cp algo-inl.h bench_sort.cc bench_parallel.cc BUILD ../highway/hwy/contrib/sort/
+cp *.h *.cc BUILD ../highway/hwy/contrib/sort/
 
 cd ../highway
 bazel build -c opt //hwy/contrib/sort:all

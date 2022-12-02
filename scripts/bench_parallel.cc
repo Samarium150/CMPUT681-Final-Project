@@ -188,7 +188,7 @@ HWY_NOINLINE void BenchDiffDataType(Algo algo, const size_t num_keys, const Dist
                   ThreadPool &pool) {
   using KeyType = typename Traits::KeyType;
   detail::SharedTraits<Traits> st;
-  const size_t num_threads = 16;
+  const size_t num_threads = 6;
   SharedState shared;
   shared.tls.resize(num_threads);
   Timestamp t0;
